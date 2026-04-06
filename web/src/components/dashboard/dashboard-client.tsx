@@ -123,8 +123,9 @@ export function DashboardClient() {
         }),
       }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["dashboard", hid, sid] });
-      void queryClient.invalidateQueries({ queryKey: ["transactions", sid] });
+      void queryClient.invalidateQueries({ queryKey: ["snapshots", hid] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["transactions"] });
     },
   });
 
@@ -137,8 +138,9 @@ export function DashboardClient() {
       if (!res.ok) throw new Error(await res.text());
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["dashboard", hid, sid] });
-      void queryClient.invalidateQueries({ queryKey: ["transactions", sid] });
+      void queryClient.invalidateQueries({ queryKey: ["snapshots", hid] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["transactions"] });
     },
   });
 

@@ -133,6 +133,32 @@ export class TransactionRepository {
     return Transaction.findById(id);
   }
 
+  /**
+   * All ledger lines that belong to the same quick-add installment plan.
+   */
+  async findByHouseholdAndInstallmentGroup(
+    householdId: Types.ObjectId,
+    installmentGroupId: Types.ObjectId
+  ): Promise<TransactionDocument[]> {
+    return Transaction.find({ householdId, installmentGroupId });
+  }
+
+  /**
+   * Legacy installment rows (before `installmentGroupId`) tied to the same quick-add string.
+   */
+  async findManualInstallmentSiblingsByParsedText(
+    householdId: Types.ObjectId,
+    parsedFromText: string
+  ): Promise<TransactionDocument[]> {
+    return Transaction.find({
+      householdId,
+      parsedFromText,
+      type: "expense",
+      source: "manual",
+      notes: { $regex: /^Parcela\s+\d+\/\d+\s*$/i },
+    });
+  }
+
   async update(
     id: Types.ObjectId,
     patch: Partial<

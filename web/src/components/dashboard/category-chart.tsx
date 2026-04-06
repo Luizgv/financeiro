@@ -17,6 +17,10 @@ type SortMode = "total-desc" | "total-asc" | "name-asc";
 
 type Props = { rows: CategoryChartRow[] };
 
+/** Same track color for every bar (list + breakdown); theme-aware via `--border`. */
+const progressTrackClass =
+  "overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--border)_65%,var(--background))]";
+
 /**
  * Expense bars with detail panel updated only on click (or Enter/Space); hover does not change the panel.
  */
@@ -93,8 +97,7 @@ export function CategoryChart({ rows }: Props) {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)]">
       <div className="space-y-3">
         {sortedRows.map((r) => {
-          const pctBar = Math.round((r.total / maxBar) * 100);
-          const isBarFull = pctBar >= 100;
+          const pctBar = Math.min(100, Math.round((r.total / maxBar) * 100));
           const isActive = r.categoryId === activeId;
           const activeRing = isActive ? `0 0 0 1px color-mix(in srgb, ${r.color} 35%, transparent)` : undefined;
           return (
@@ -117,23 +120,18 @@ export function CategoryChart({ rows }: Props) {
                 <span className={isActive ? "font-medium text-foreground" : "text-foreground"}>{r.name}</span>
                 <span className="shrink-0 tabular-nums text-muted">{formatBrl(r.total)}</span>
               </div>
-              {isBarFull ? (
+              <div
+                className={`h-2.5 ${progressTrackClass} transition-[height] duration-300 group-hover:h-3`}
+                style={{ boxShadow: activeRing }}
+              >
                 <div
-                  className="h-2.5 rounded-full transition-all duration-300 group-hover:h-3 motion-safe:group-hover:brightness-110"
-                  style={{ backgroundColor: r.color, boxShadow: activeRing }}
+                  className="h-full min-h-0 max-w-full transition-[width] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-safe:group-hover:brightness-110"
+                  style={{
+                    width: `${pctBar}%`,
+                    backgroundColor: r.color,
+                  }}
                 />
-              ) : (
-                <div className="relative h-2.5 overflow-hidden rounded-full bg-muted/80 transition-all duration-300 group-hover:h-3 group-hover:bg-muted">
-                  <div
-                    className="h-full max-w-full rounded-full transition-[width] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-safe:group-hover:brightness-110"
-                    style={{
-                      width: `${pctBar}%`,
-                      backgroundColor: r.color,
-                      boxShadow: activeRing,
-                    }}
-                  />
-                </div>
-              )}
+              </div>
             </div>
           );
         })}
@@ -167,9 +165,9 @@ export function CategoryChart({ rows }: Props) {
                         {formatBrl(item.total)}
                       </span>
                     </div>
-                    <div className="h-1.5 overflow-hidden rounded-full bg-muted/80">
+                    <div className={`h-1.5 ${progressTrackClass}`}>
                       <div
-                        className="h-full rounded-full transition-[width] duration-500 ease-out"
+                        className="h-full min-h-0 max-w-full transition-[width] duration-500 ease-out"
                         style={{
                           width: `${Math.min(100, item.pctOfCategory)}%`,
                           backgroundColor: active.color,

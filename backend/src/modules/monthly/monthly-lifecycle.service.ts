@@ -1,5 +1,5 @@
 import type { Types } from "mongoose";
-import { currentMonthKey } from "../../shared/month-key.js";
+import { compareMonthKeys, currentMonthKey } from "../../shared/month-key.js";
 import { AppError } from "../../shared/app-error.js";
 import { isMongoDuplicateKeyError } from "../../shared/mongo-error.js";
 import type { CategoryRepository } from "../categories/category.repository.js";
@@ -85,7 +85,8 @@ export class MonthlyLifecycleService {
   }
 
   /**
-   * Keeps income transactions aligned with fixed-income templates for every open month (e.g. after saving salaries).
+   * Keeps income transactions aligned with fixed-income templates for open months up to the calendar month.
+   * Future months (e.g. created for installments) stay without materialized salaries until that month is current.
    */
   async syncFixedIncomesToOpenSnapshots(householdId: Types.ObjectId): Promise<void> {
     const incomeCategory = await this.categories.findBySlugForHousehold("income-fixed", null);
@@ -93,9 +94,19 @@ export class MonthlyLifecycleService {
       throw new AppError(500, "SEED_MISSING", "Category income-fixed is not seeded");
     }
 
+    const todayKey = currentMonthKey();
     const open = await this.snapshots.listOpenByHousehold(householdId);
     const templates = await this.fixedIncomes.listByHousehold(householdId);
     for (const snap of open) {
+      const isFutureMonth = compareMonthKeys(snap.monthKey, todayKey) > 0;
+      if (isFutureMonth) {
+        for (const fi of templates) {
+          await this.transactions.deleteBySnapshotAndFixedIncome(snap._id, fi._id);
+        }
+        await this.recalculateTotals(snap._id);
+        continue;
+      }
+
       const startOfMonth = startOfMonthDate(snap.monthKey);
       for (const fi of templates) {
         await this.upsertFixedIncomeTransaction(

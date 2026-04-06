@@ -7,6 +7,12 @@ export const PREDEFINED_CATEGORIES = [
   { name: "Pets", slug: "pets", icon: "paw", color: "#f97316" },
   { name: "Alimentação", slug: "food", icon: "utensils", color: "#eab308" },
   { name: "Moradia", slug: "housing", icon: "home", color: "#a855f7" },
+  {
+    name: "Apartamento",
+    slug: "apartamento",
+    icon: "building-2",
+    color: "#0d9488",
+  },
   { name: "Contas", slug: "utilities", icon: "bolt", color: "#06b6d4" },
   { name: "Saúde", slug: "health", icon: "heart-pulse", color: "#ef4444" },
   {

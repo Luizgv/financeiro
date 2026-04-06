@@ -1,4 +1,4 @@
-import type { Types } from "mongoose";
+import { Types } from "mongoose";
 import { AppError } from "../../shared/app-error.js";
 import { addMonthsToMonthKey, startOfMonthFromKey } from "../../shared/month-key.js";
 import type { CategoryRepository } from "../categories/category.repository.js";
@@ -26,6 +26,7 @@ export type CreateTransactionInput = {
   parsedFromText?: string | null;
   storedFileId?: Types.ObjectId | null;
   fromFixedIncomeId?: Types.ObjectId | null;
+  installmentGroupId?: Types.ObjectId | null;
 };
 
 export type CreateTransactionRowInput = Omit<CreateTransactionInput, "householdId" | "snapshotId">;
@@ -101,6 +102,7 @@ export class TransactionService {
   ): Promise<TransactionDocument[]> {
     const anchor = await this.requireWritableSnapshot(anchorSnapshotId);
     const inst = parsed.installments!;
+    const installmentGroupId = new Types.ObjectId();
     const docs: TransactionDocument[] = [];
     for (let i = 0; i < inst.count; i++) {
       const monthKey = addMonthsToMonthKey(anchor.monthKey, i);
@@ -120,6 +122,7 @@ export class TransactionService {
         parsedFromText: text,
         source: "manual",
         extractedConfidence: parsed.confidence,
+        installmentGroupId,
       });
       docs.push(doc);
     }
@@ -147,6 +150,7 @@ export class TransactionService {
       parsedFromText: input.parsedFromText ?? null,
       storedFileId: input.storedFileId ?? null,
       fromFixedIncomeId: input.fromFixedIncomeId ?? null,
+      installmentGroupId: input.installmentGroupId ?? null,
     });
     await this.lifecycle.recalculateTotals(input.snapshotId);
     return doc;
@@ -184,6 +188,7 @@ export class TransactionService {
         parsedFromText: row.parsedFromText ?? null,
         storedFileId: row.storedFileId ?? null,
         fromFixedIncomeId: row.fromFixedIncomeId ?? null,
+        installmentGroupId: row.installmentGroupId ?? null,
       });
     }
     await this.lifecycle.recalculateTotals(snapshotId);
@@ -220,9 +225,57 @@ export class TransactionService {
     if (!tx || String(tx.snapshotId) !== String(snapshotId)) {
       throw new AppError(404, "NOT_FOUND", "Transaction not found");
     }
+
+    const groupId = tx.installmentGroupId;
+    if (groupId) {
+      const byGroup = await this.transactions.findByHouseholdAndInstallmentGroup(tx.householdId, groupId);
+      if (byGroup.length > 0) {
+        await this.deleteInstallmentSiblings(byGroup);
+        return { ok: true };
+      }
+    }
+
+    const legacySiblings =
+      tx.type === "expense" &&
+      tx.source === "manual" &&
+      Boolean(tx.parsedFromText) &&
+      /^\s*Parcela\s+\d+\/\d+\s*$/i.test(String(tx.notes ?? "").trim())
+        ? await this.transactions.findManualInstallmentSiblingsByParsedText(
+            tx.householdId,
+            tx.parsedFromText as string
+          )
+        : [];
+
+    if (legacySiblings.length > 0) {
+      await this.deleteInstallmentSiblings(legacySiblings);
+      return { ok: true };
+    }
+
     await this.transactions.delete(transactionId);
     await this.lifecycle.recalculateTotals(snapshotId);
     return { ok: true };
+  }
+
+  private async deleteInstallmentSiblings(siblings: TransactionDocument[]): Promise<void> {
+    for (const row of siblings) {
+      const snap = await this.snapshots.findById(row.snapshotId);
+      if (!snap) continue;
+      if (snap.isClosed) {
+        throw new AppError(
+          409,
+          "MONTH_CLOSED",
+          "Um mês deste parcelamento está fechado; não dá para apagar o plano inteiro."
+        );
+      }
+    }
+    const snapshotIds = new Set<string>();
+    for (const row of siblings) {
+      await this.transactions.delete(row._id);
+      snapshotIds.add(String(row.snapshotId));
+    }
+    for (const sid of snapshotIds) {
+      await this.lifecycle.recalculateTotals(new Types.ObjectId(sid));
+    }
   }
 
   private async requireWritableSnapshot(snapshotId: Types.ObjectId) {

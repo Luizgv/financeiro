@@ -24,6 +24,8 @@ const transactionSchema = new Schema(
     extractedConfidence: { type: Number, min: 0, max: 1 },
     rawText: { type: String, default: null },
     fromFixedIncomeId: { type: Schema.Types.ObjectId, ref: "FixedIncome", default: null },
+    /** Same id on every row of a quick-add installment plan (delete one removes all). */
+    installmentGroupId: { type: Schema.Types.ObjectId, default: null },
     parsedFromText: { type: String, default: null },
     storedFileId: { type: Schema.Types.ObjectId, ref: "StoredFile", default: null },
   },
@@ -33,6 +35,7 @@ const transactionSchema = new Schema(
 transactionSchema.index({ snapshotId: 1, date: -1 });
 transactionSchema.index({ householdId: 1, monthKey: 1 });
 transactionSchema.index({ snapshotId: 1, source: 1 });
+transactionSchema.index({ householdId: 1, installmentGroupId: 1 }, { sparse: true });
 
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];

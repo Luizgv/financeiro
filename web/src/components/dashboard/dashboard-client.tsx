@@ -21,6 +21,7 @@ import { QuickAdd } from "./quick-add";
 import { SalarySection } from "./salary-section";
 import { StatementUpload } from "./statement-upload";
 import { StructuredForm } from "./structured-form";
+import { MonthSummarySection } from "./month-summary-section";
 import { TotalCards } from "./total-cards";
 import { TransactionList } from "./transaction-list";
 
@@ -87,6 +88,7 @@ export function DashboardClient() {
       void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       void queryClient.invalidateQueries({ queryKey: ["transactions"] });
       void queryClient.invalidateQueries({ queryKey: ["fixed-incomes", d.householdId] });
+      void queryClient.invalidateQueries({ queryKey: ["month-summary"] });
     },
   });
 
@@ -103,6 +105,7 @@ export function DashboardClient() {
       void queryClient.invalidateQueries({ queryKey: ["snapshots", hid] });
       void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       void queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      void queryClient.invalidateQueries({ queryKey: ["month-summary", hid, sid] });
     },
   });
 
@@ -126,6 +129,7 @@ export function DashboardClient() {
       void queryClient.invalidateQueries({ queryKey: ["snapshots", hid] });
       void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       void queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      void queryClient.invalidateQueries({ queryKey: ["month-summary", hid, sid] });
     },
   });
 
@@ -141,6 +145,7 @@ export function DashboardClient() {
       void queryClient.invalidateQueries({ queryKey: ["snapshots", hid] });
       void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       void queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      void queryClient.invalidateQueries({ queryKey: ["month-summary", hid, sid] });
     },
   });
 
@@ -226,6 +231,8 @@ export function DashboardClient() {
             totalExpenses={dashboard.data.totals.totalExpenses}
             balance={dashboard.data.totals.balance}
           />
+
+          {hid && sid && <MonthSummarySection householdId={hid} snapshotId={sid} />}
 
           <section className="grid gap-4 lg:grid-cols-2">
             <div className="rounded-2xl border border-border/80 bg-card/50 p-5">

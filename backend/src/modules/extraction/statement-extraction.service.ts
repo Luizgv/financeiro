@@ -12,6 +12,7 @@ import { readUploadAsText } from "./buffer-to-text.js";
 import { inferPaymentHintFromText, type PaymentHintKind } from "./payment-hint.js";
 
 const PREVIEW_LINE_CAP = 50;
+const PREVIEW_PIX_LINE_CAP = 80;
 const PAYMENT_KEYS: PaymentHintKind[] = ["pix", "card", "debit", "transfer", "boleto", "unknown"];
 
 export type StatementPreviewLine = {
@@ -39,6 +40,8 @@ export type StatementPreviewResult = {
   lineCount: number;
   totals: { expense: number; income: number; net: number };
   paymentSummary: StatementPreviewPaymentRow[];
+  /** Up to N lines classified as PIX (read-only preview). */
+  pixLines: StatementPreviewLine[];
   lines: StatementPreviewLine[];
 };
 
@@ -86,6 +89,7 @@ export class StatementExtractionService {
     let expense = 0;
     let income = 0;
     const lines: StatementPreviewLine[] = [];
+    const pixLines: StatementPreviewLine[] = [];
 
     for (const line of parsed) {
       if (line.type === "expense") expense += line.amount;
@@ -102,17 +106,17 @@ export class StatementExtractionService {
       }
 
       const slug = categorySlugForParsedLine(line.title, line.type);
-      if (lines.length < PREVIEW_LINE_CAP) {
-        lines.push({
-          title: line.title,
-          amount: line.amount,
-          type: line.type,
-          date: line.date.toISOString(),
-          paymentHint: hint,
-          suggestedCategory: slugToName.get(slug) ?? slug,
-          confidence: line.confidence,
-        });
-      }
+      const previewLine: StatementPreviewLine = {
+        title: line.title,
+        amount: line.amount,
+        type: line.type,
+        date: line.date.toISOString(),
+        paymentHint: hint,
+        suggestedCategory: slugToName.get(slug) ?? slug,
+        confidence: line.confidence,
+      };
+      if (lines.length < PREVIEW_LINE_CAP) lines.push(previewLine);
+      if (hint === "pix" && pixLines.length < PREVIEW_PIX_LINE_CAP) pixLines.push(previewLine);
     }
 
     const paymentSummary: StatementPreviewPaymentRow[] = PAYMENT_KEYS.map((key) => {
@@ -137,6 +141,7 @@ export class StatementExtractionService {
         net: Math.round((income - expense) * 100) / 100,
       },
       paymentSummary,
+      pixLines,
       lines,
     };
   }

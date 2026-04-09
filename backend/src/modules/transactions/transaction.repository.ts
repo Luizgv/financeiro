@@ -16,6 +16,25 @@ export class TransactionRepository {
     return Transaction.find({ snapshotId }).sort({ date: -1, createdAt: -1 });
   }
 
+  /**
+   * Single highest expense line in the snapshot (for month summary).
+   */
+  async findLargestExpense(
+    snapshotId: Types.ObjectId
+  ): Promise<{ title: string; amount: number; categoryId: Types.ObjectId } | null> {
+    const sid = snapshotOid(snapshotId);
+    const row = await Transaction.findOne({ snapshotId: sid, type: "expense" })
+      .sort({ amount: -1 })
+      .select({ title: 1, amount: 1, categoryId: 1 })
+      .lean();
+    if (!row || row.amount == null || !row.categoryId) return null;
+    return {
+      title: String(row.title ?? ""),
+      amount: row.amount,
+      categoryId: row.categoryId as Types.ObjectId,
+    };
+  }
+
   async countBySnapshot(snapshotId: Types.ObjectId): Promise<number> {
     return Transaction.countDocuments({ snapshotId });
   }

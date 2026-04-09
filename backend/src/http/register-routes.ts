@@ -82,6 +82,17 @@ export async function registerRoutes(app: FastifyInstance, c: ApiContainer): Pro
     return reply.send(serializeDoc(data as unknown as Record<string, unknown>));
   });
 
+  app.get("/api/households/:householdId/snapshots/:snapshotId/month-summary", async (request, reply) => {
+    const { householdId, snapshotId } = z
+      .object({ householdId: objectIdString, snapshotId: objectIdString })
+      .parse(request.params);
+    const data = await c.dashboard.getMonthSummary(
+      new mongoose.Types.ObjectId(householdId),
+      new mongoose.Types.ObjectId(snapshotId)
+    );
+    return reply.send(serializeDoc(data as unknown as Record<string, unknown>));
+  });
+
   app.get("/api/households/:householdId/snapshots/:snapshotId/transactions", async (request, reply) => {
     const { snapshotId } = z.object({ snapshotId: objectIdString }).parse(request.params);
     const rows = await c.transactionRepo.listBySnapshot(new mongoose.Types.ObjectId(snapshotId));

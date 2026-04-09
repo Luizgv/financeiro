@@ -59,6 +59,26 @@ export type DashboardResponse = {
   }[];
 };
 
+export type MonthSummaryExpenseChartSlice = {
+  name: string;
+  total: number;
+  percentOfExpenses: number;
+  color: string;
+};
+
+export type MonthSummaryResponse = {
+  monthKey: string;
+  monthLabel: string;
+  totals: { totalIncome: number; totalExpenses: number; balance: number };
+  mainCategories: { name: string; total: number; percentOfExpenses: number; color: string }[];
+  /** All expense categories for the donut (top slices + "Outros" when many). */
+  expenseChart?: MonthSummaryExpenseChartSlice[];
+  highestCategory: { name: string; total: number; percentOfExpenses: number } | null;
+  highestExpense: { title: string; amount: number; categoryName: string } | null;
+  narrative: string;
+  highlights: string[];
+};
+
 export type TransactionRow = {
   _id: string;
   title: string;
@@ -115,6 +135,8 @@ export type StatementPreviewResponse = {
   lineCount: number;
   totals: { expense: number; income: number; net: number };
   paymentSummary: StatementPreviewPaymentRow[];
+  /** Sample of lines classified as PIX (full file scan; not limited to general line cap). */
+  pixLines?: StatementPreviewLine[];
   lines: StatementPreviewLine[];
 };
 

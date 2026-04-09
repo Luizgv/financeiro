@@ -57,6 +57,7 @@ export function SalarySection({ householdId, disabled }: Props) {
       void qc.invalidateQueries({ queryKey: ["snapshots", householdId] });
       void qc.invalidateQueries({ queryKey: ["dashboard"] });
       void qc.invalidateQueries({ queryKey: ["transactions"] });
+      void qc.invalidateQueries({ queryKey: ["month-summary"] });
     },
   });
 
